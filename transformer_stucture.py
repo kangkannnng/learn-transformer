@@ -1,17 +1,7 @@
 import torch
 import math
-import time
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
-from torchtext.datasets import TranslationDataset
-from torchtext.data import Field, BucketIterator
-from torchtext.data.functional import to_map_style_dataset
-from torchtext.data.metrics import bleu_score
-from torchtext.utils import download_from_url, extract_archive
 
 # 测试的时候固定随机数种子
 torch.manual_seed(0)
