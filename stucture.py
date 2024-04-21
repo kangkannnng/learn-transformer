@@ -5,7 +5,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from torch.autograd import Variable
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
+from torchtext.datasets import TranslationDataset
+from torchtext.data import Field, BucketIterator
+from torchtext.data.functional import to_map_style_dataset
+from torchtext.data.metrics import bleu_score
+from torchtext.utils import download_from_url, extract_archive
 
 # 测试的时候固定随机数种子
 torch.manual_seed(0)
@@ -245,81 +251,3 @@ class Transformer(nn.Module):
         d_output = self.decoder(trg, e_outputs, src_mask, trg_mask)
         output = self.out(d_output)
         return output
-    
-
-# 测试
-# 使用data文件夹下的english.txt和french.txt
-EN_TEXT = Field(tokenize = 'spacy', tokenizer_language='en', init_token = '<sos>', eos_token = '<eos>', lower = True)
-FR_TEXT = Field(tokenize = 'spacy', tokenizer_language='fr', init_token = '<sos>', eos_token = '<eos>', lower = True)
-
-# TabularDataset加载数据
-train_data, valid_data, test_data = TabularDataset.splits(
-    path = 'data',
-    train = 'english.txt',
-    validation = 'french.txt',
-    test = 'french.txt',
-    format = 'tsv',
-    fields = [('English', EN_TEXT), ('French', FR_TEXT)]
-)
-
-# 构建词汇表
-EN_TEXT.build_vocab(train_data, min_freq = 2)
-FR_TEXT.build_vocab(train_data, min_freq = 2)
-
-# 创建迭代器
-BATCH_SIZE = 128
-train_iterator, valid_iterator, test_iterator = BucketIterator.splits(
-    (train_data, valid_data, test_data),
-    batch_size = BATCH_SIZE,
-    device = torch.device('cuda')
-)
-
-
-# 这里还是有问题！！！
-
-d_model = 512
-heads = 8
-N = 6
-src_vocab = len(EN_TEXT.vocab)
-trg_vocab = len(FR_TEXT.vocab)
-model = Transformer(src_vocab, trg_vocab, d_model, N, heads, dropout=0.1).to(torch.device('cuda'))
-for p in model.parameters():
-    if p.dim() > 1:
-        # 这是为了防止梯度爆炸
-        nn.init.xavier_uniform_(p)
-
-optim = torch.optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.98), eps=1e-9)
-
-def nopeak_mask(size, opt):
-    np_mask = np.triu(np.ones((1, size, size)), k=1).astype('uint8')
-    np_mask = torch.tensor(np_mask) == 0
-    return np_mask
-
-# 定义一个mask矩阵，这个矩阵是一个上三角矩阵，对角线以下的值都是0，对角线以上的值都是1
-def create_masks(src, trg, opt):
-    
-    src_mask = (src != opt.src_pad).unsqueeze(-2).to(opt.device)
-
-    if trg is not None:
-        trg_mask = (trg != opt.trg_pad).unsqueeze(-2).to(opt.device)
-        size = trg.size(1)  # get seq_len for matrix
-        np_mask = nopeak_mask(size, opt).to(opt.device)
-        trg_mask = trg_mask & np_mask
-
-    else:
-        trg_mask = None
-    return src_mask, trg_mask
-
-def train_model(epochs, print_every=100):
-    model.train()
-    start = time.time()
-    temp = start
-    total_loss = 0
-    for epoch in range(epochs):
-        for i, batch in enumerate(train_iterator):
-            src = batch.English.transpose(0, 1).to(torch.device('cuda'))
-            trg = batch.French.transpose(0, 1).to(torch.device('cuda'))
-            trg_input = trg[:, :-1]
-            targets = trg[:, 1:].contiguous().view(-1)
-            src_mask, trg_mask = create_masks(src, trg_input)
-            
