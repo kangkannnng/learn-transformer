@@ -2,7 +2,7 @@ import torch
 import time
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer_stucture import Transformer
+from transformer.transformer_stucture import Transformer
 
 # 定义模型参数
 d_model = 512
