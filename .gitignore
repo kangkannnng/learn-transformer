@@ -3,5 +3,6 @@
 /__pycache__
 /bert/data
 /bert/wiki
+/bert/pretrained-bert
 /bert/test.txt
 /bert/train.txt
