@@ -245,6 +245,12 @@ def main():
                             tokenizer,
                             ds_config,
                             dropout=args.dropout)
+    # tokenizer = BaiChuanTokenizer.from_pretrained(args.model_name_or_path)
+    # model = create_hf_model(BaiChuanForCausalLM,
+    #                         args.model_name_or_path,
+    #                         tokenizer,
+    #                         ds_config,
+    #                         dropout=args.disable_dropout)
 
     if args.compute_fp32_loss:
         print_rank_0(
